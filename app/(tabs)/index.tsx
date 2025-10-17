@@ -1,98 +1,168 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [hours, setHours] = useState('');
+  const [emoji, setEmoji] = useState('🤔');
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const handleChange = (text: string) => {
+    const value = text.replace(/[^0-9]/g, '');
+    setHours(value);
+
+    const num = parseInt(value, 10);
+    if (isNaN(num)) {
+      setEmoji('🤔');
+    } else if (num <= 4) {
+      setEmoji('🤕');
+    } else if (num <= 6) {
+      setEmoji('😴');
+    } else {
+      setEmoji('💪');
+    }
+  };
+
+  return (
+    <ScrollView style={styles.container}>
+      <LinearGradient colors={['#ff4b5c', '#ff6f61']} style={styles.header}>
+        <Image
+          source={require('@/assets/images/medflow_logo.png')}
+          style={styles.logo}
+        />
+        <Text style={styles.headerTitle}>MedFlow</Text>
+        <View style={styles.menu}>
+          <Text style={[styles.menuItem, styles.activeMenu]}>daily</Text>
+          <Text style={styles.menuItem}>weekly</Text>
+          <Text style={styles.menuItem}>monthly</Text>
+          <Text style={styles.menuItem}>yearly</Text>
+        </View>
+      </LinearGradient>
+
+      <View style={styles.content}>
+        <ThemedView style={styles.card}>
+          <ThemedText type="subtitle" style={{ color: '#b22222' }}>You are on a 3-day streak! 🔥</ThemedText>
+        </ThemedView>
+
+        <ThemedView style={styles.card}>
+          <ThemedText type="subtitle" style={{ color: '#b22222' }}>How much did you sleep last night?</ThemedText>
+          <TextInput
+            style={styles.input}
+            placeholder="Insert number of hours"
+            placeholderTextColor="#aaa"
+            keyboardType="numeric"
+            value={hours}
+            onChangeText={handleChange}
+          />
+        </ThemedView>
+
+        <ThemedView style={styles.cardCenter}>
+          <ThemedText type="subtitle" style={{ color: '#b22222' }}>Your current state:</ThemedText>
+          <ThemedText type="title">{emoji}</ThemedText>
+        </ThemedView>
+      </View>
+
+      <LinearGradient colors={['#ff4b5c', '#ff6f61']} style={styles.navbar}>
+      </LinearGradient>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: {
+    flex: 1,
+    backgroundColor: '#ff4b5c',
+  },
+  header: {
+    paddingTop: 60,
+    paddingBottom: 40,
+    paddingHorizontal: 24,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
     alignItems: 'center',
-    gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  logo: {
+    height: 80,
+    width: 130,
+    marginBottom: 10,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
+  headerTitle: {
+    color: 'white',
+    fontSize: 26,
+    fontWeight: 'bold',
+  },
+  headerSubtitle: {
+    color: 'white',
+    fontSize: 16,
+    marginTop: 4,
+  },
+  menu: {
+    flexDirection: 'row',
+    marginTop: 16,
+    justifyContent: 'space-around',
+    width: '90%',
+  },
+  menuItem: {
+    color: 'white',
+    opacity: 0.7,
+    fontSize: 14,
+  },
+  activeMenu: {
+    opacity: 1,
+    fontWeight: 'bold',
+  },
+  content: {
+    flex: 1,
+    backgroundColor: 'white',
+    marginTop: -20,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+    padding: 20,
+    justifyContent: 'flex-start',
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  cardCenter: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  input: {
+    height: 45,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    color: '#000',
+    backgroundColor: '#fff',
+    marginTop: 10,
+  },
+  navbar: {
+    height: 70,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
     position: 'absolute',
+  },
+  navText: {
+    color: 'white',
+    fontSize: 22,
   },
 });
