@@ -4,8 +4,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
+import { DarkVeilBackground } from '@/components/dark-veil-background';
+import { GlassCard } from '@/components/glass-card';
+import { SleepIndicator } from '@/components/sleep-indicator';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { Colors, Typography } from '@/constants/theme';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -19,6 +23,28 @@ const supabase = createClient(supabaseUrl!, supabaseKey!);
 
 export default function HomeScreen() {
   const [hours, setHours] = useState('');
+  const [debouncedHours, setDebouncedHours] = useState('');
+  
+  // Debounce the hours input for better performance
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedHours(hours);
+    }, 50); // Reduced to 50ms for faster response
+
+    return () => clearTimeout(timer);
+  }, [hours]);
+
+  // Parse sleep hours with debouncing for optimal performance
+  const sleepHours = useMemo(() => parseInt(debouncedHours, 10) || 0, [debouncedHours]);
+
+  // Handle input changes with immediate visual feedback and validation
+  const handleChange = (text: string) => {
+    // Allow only numbers and limit to 2 digits
+    const value = text.replace(/[^0-9]/g, '').slice(0, 2);
+    // Validate range (0-24 hours)
+    const numValue = parseInt(value, 10);
+    if (value === '' || (numValue >= 0 && numValue <= 24)) {
+      setHours(value);
   const [wakeUps, setWakeUps] = useState('');
   const [emoji, setEmoji] = useState('🤔');
   const [quality, setQuality] = useState('');
@@ -102,26 +128,15 @@ export default function HomeScreen() {
     }
   };
 
-  return (
-    <ScrollView style={styles.container}>
-      <LinearGradient colors={['#ff4b5c', '#ff6f61']} style={styles.header}>
-        <Image
-          source={require('@/assets/images/medflow_logo.png')}
-          style={styles.logo}
-        />
-        <Text style={styles.headerTitle}>MedFlow</Text>
-        <View style={styles.menu}>
-          <Text style={[styles.menuItem, styles.activeMenu]}>daily</Text>
-          <Text style={styles.menuItem}>weekly</Text>
-          <Text style={styles.menuItem}>monthly</Text>
-          <Text style={styles.menuItem}>yearly</Text>
-        </View>
-      </LinearGradient>
+  // Handle Enter key press - update immediately
+  const handleSubmit = () => {
+    setDebouncedHours(hours); // Force immediate update
+  };
 
-      <View style={styles.content}>
-        <ThemedView style={styles.card}>
-          <ThemedText type="subtitle" style={{ color: '#b22222' }}>You are on a 3-day streak! 🔥</ThemedText>
-        </ThemedView>
+
+  // Memoize theme colors to prevent unnecessary re-renders
+  const accentColor = useThemeColor({}, 'accent');
+  const placeholderText = useThemeColor({}, 'placeholderText');
 
         <ThemedView style={styles.card}>
           <ThemedText type="subtitle" style={{ color: '#b22222' }}>How much did you sleep last night?</ThemedText>
@@ -154,22 +169,75 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </ThemedView>
 
-        <ThemedView style={styles.cardCenter}>
-          <ThemedText type="subtitle" style={{ color: '#b22222' }}>Your current state:</ThemedText>
-          <ThemedText type="title">{emoji}</ThemedText>
-        </ThemedView>
-      </View>
+        {/* Content Cards */}
+        <View style={styles.content}>
+          {/* Combined Streak & Sleep Input Card */}
+          <GlassCard style={styles.combinedCard} noShadow={true}>
+            <View style={styles.combinedCardContent}>
+              {/* Streak Section */}
+              <View style={styles.streakSection}>
+                <ThemedText type="subtitle" style={[styles.cardTitle, { color: accentColor }]}>
+                  You are on a 3-day streak! 🔥
+                </ThemedText>
+              </View>
+              
+              {/* Divider */}
+              <View style={styles.divider} />
+              
+              {/* Sleep Input Section */}
+              <View style={styles.sleepSection}>
+                <ThemedText type="subtitle" style={[styles.cardTitle, { color: accentColor }]}>
+                  How much did you sleep last night?
+                </ThemedText>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      color: Colors.dark.text,
+                    }
+                  ]}
+                  placeholder="Enter the number of hours you slept"
+                  placeholderTextColor={placeholderText}
+                  keyboardType="numeric"
+                  value={hours}
+                  onChangeText={handleChange}
+                  onSubmitEditing={handleSubmit}
+                  maxLength={2}
+                  returnKeyType="done"
+                  autoComplete="off"
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                  selectTextOnFocus={true}
+                />
+              </View>
+            </View>
+          </GlassCard>
 
-      <LinearGradient colors={['#ff4b5c', '#ff6f61']} style={styles.navbar}>
-      </LinearGradient>
-    </ScrollView>
+          {/* Sleep Quality Card */}
+          <GlassCard style={styles.card}>
+            <View style={styles.cardContent}>
+              <ThemedText type="subtitle" style={[styles.cardTitle, { color: accentColor }]}>
+                Your sleep quality:
+              </ThemedText>
+              <SleepIndicator hours={sleepHours} size="large" />
+            </View>
+          </GlassCard>
+        </View>
+      </ScrollView>
+    </DarkVeilBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ff4b5c',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: Typography.spacing['4xl'],
   },
   addButton: {
     backgroundColor: '#ff6f61',
@@ -187,92 +255,104 @@ const styles = StyleSheet.create({
     fontSize: 16 
   },
   header: {
-    paddingTop: 60,
-    paddingBottom: 40,
-    paddingHorizontal: 24,
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
+    paddingTop: Typography.spacing['4xl'],
+    paddingBottom: Typography.spacing['3xl'],
+    paddingHorizontal: Typography.spacing.lg,
     alignItems: 'center',
   },
   logo: {
-    height: 80,
-    width: 130,
-    marginBottom: 10,
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 26,
-    fontWeight: 'bold',
-  },
-  headerSubtitle: {
-    color: 'white',
-    fontSize: 16,
-    marginTop: 4,
+    height: 100,
+    width: 160,
+    marginBottom: Typography.spacing.sm,
   },
   menu: {
     flexDirection: 'row',
-    marginTop: 16,
     justifyContent: 'space-around',
     width: '90%',
+    marginTop: Typography.spacing.sm,
   },
   menuItem: {
-    color: 'white',
+    fontSize: Typography.base.fontSize,
+    fontWeight: Typography.weights.normal,
     opacity: 0.7,
-    fontSize: 14,
   },
   activeMenu: {
     opacity: 1,
-    fontWeight: 'bold',
+    fontWeight: Typography.weights.semibold,
   },
   content: {
     flex: 1,
-    backgroundColor: 'white',
-    marginTop: -20,
-    borderTopLeftRadius: 40,
-    borderTopRightRadius: 40,
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
-    padding: 20,
-    justifyContent: 'flex-start',
+    paddingHorizontal: Typography.spacing.lg,
+    paddingTop: Typography.spacing.sm, // Reduced padding to bring cards closer to menu
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#ddd',
+    marginBottom: Typography.spacing.lg,
+    minHeight: 160, // Ensure all cards have equal minimum height
   },
-  cardCenter: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 30,
+  sleepInputCard: {
+    marginBottom: Typography.spacing.lg,
+    minHeight: 160,
+    borderTopLeftRadius: 0, // Remove top border radius to connect with streak card
+    borderTopRightRadius: 0, // Remove top border radius to connect with streak card
+  },
+  streakCard: {
+    marginBottom: 0, // Remove margin below streak card
+    minHeight: 160,
+    shadowOpacity: 0, // Remove shadow completely
+    elevation: 0, // Remove elevation for Android
+    borderBottomLeftRadius: 0, // Remove bottom border radius
+    borderBottomRightRadius: 0, // Remove bottom border radius
+  },
+  cardContent: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
+  },
+  combinedCard: {
+    marginBottom: Typography.spacing.lg,
+    minHeight: 120, // Much smaller height for compact design
+    shadowOpacity: 0, // Remove shadow completely
+    elevation: 0, // Remove elevation for Android
+  },
+  combinedCardContent: {
+    flex: 1,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  streakSection: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  sleepSection: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  divider: {
+    height: 1,
+    width: '80%',
+    backgroundColor: 'rgba(148, 163, 184, 0.3)',
+    marginVertical: 6,
+  },
+  cardTitle: {
+    marginBottom: Typography.spacing.md,
+    textAlign: 'center',
   },
   input: {
-    height: 45,
-    borderColor: '#ccc',
+    height: 56,
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    fontSize: 16,
-    color: '#000',
-    backgroundColor: '#fff',
-    marginTop: 10,
-  },
-  navbar: {
-    height: 70,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    borderTopLeftRadius: 40,
-    borderTopRightRadius: 40,
-    position: 'absolute',
-  },
-  navText: {
-    color: 'white',
-    fontSize: 22,
+    borderRadius: 16,
+    paddingHorizontal: Typography.spacing.lg,
+    fontSize: Typography.base.fontSize,
+    marginTop: Typography.spacing.md,
+    fontFamily: 'SF Pro Text',
+    backgroundColor: 'rgba(30, 41, 59, 0.3)',
+    borderColor: 'rgba(148, 163, 184, 0.3)',
+    textAlign: 'center',
+    width: '100%',
   },
 });

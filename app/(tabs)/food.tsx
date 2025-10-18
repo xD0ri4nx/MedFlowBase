@@ -1,3 +1,19 @@
+import { useState } from 'react';
+import {
+    Modal,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native';
+import ConfettiCannon from 'react-native-confetti-cannon';
+
+import { DarkVeilBackground } from '@/components/dark-veil-background';
+import { GlassCard } from '@/components/glass-card';
+import { ThemedText } from '@/components/themed-text';
+import { Colors, Typography } from '@/constants/theme';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import { createClient } from '@supabase/supabase-js';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
@@ -80,56 +96,117 @@ export default function FoodTrackingScreen() {
     }
   };
 
+  const accentColor = useThemeColor({}, 'accent');
+  const placeholderText = useThemeColor({}, 'placeholderText');
+
   return (
-    <View style={styles.container}>
-      <LinearGradient colors={['#ff4b5c', '#ff6f61']} style={styles.header}>
-        <Text style={styles.headerTitle}>Food & Water Tracker</Text>
-      </LinearGradient>
-
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>🍳 Breakfast</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Add food items..."
-            placeholderTextColor="#999"
-            value={breakfast}
-            onChangeText={setBreakfast}
-          />
+    <DarkVeilBackground style={styles.container}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header Section */}
+        <View style={styles.header}>
+          <ThemedText type="title" style={styles.headerTitle}>
+            Food & Water Tracker
+          </ThemedText>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>🥗 Lunch</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Add food items..."
-            placeholderTextColor="#999"
-            value={lunch}
-            onChangeText={setLunch}
-          />
-        </View>
+        {/* Content Cards */}
+        <View style={styles.content}>
+          {/* Breakfast Card */}
+          <GlassCard style={styles.card}>
+            <View style={styles.cardContent}>
+              <ThemedText type="subtitle" style={[styles.sectionTitle, { color: accentColor }]}>
+                🍳 Breakfast
+              </ThemedText>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    color: Colors.dark.text,
+                    borderColor: Colors.dark.borderColor,
+                    backgroundColor: 'rgba(30, 41, 59, 0.3)',
+                  }
+                ]}
+                placeholder="Add food items..."
+                placeholderTextColor={placeholderText}
+                value={breakfast}
+                onChangeText={setBreakfast}
+              />
+            </View>
+          </GlassCard>
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>🍝 Dinner</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Add food items..."
-            placeholderTextColor="#999"
-            value={dinner}
-            onChangeText={setDinner}
-          />
-        </View>
+          {/* Lunch Card */}
+          <GlassCard style={styles.card}>
+            <View style={styles.cardContent}>
+              <ThemedText type="subtitle" style={[styles.sectionTitle, { color: accentColor }]}>
+                🥗 Lunch
+              </ThemedText>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    color: Colors.dark.text,
+                    borderColor: Colors.dark.borderColor,
+                    backgroundColor: 'rgba(30, 41, 59, 0.3)',
+                  }
+                ]}
+                placeholder="Add food items..."
+                placeholderTextColor={placeholderText}
+                value={lunch}
+                onChangeText={setLunch}
+              />
+            </View>
+          </GlassCard>
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>💧 Water intake (L)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter liters (e.g. 1.5)"
-            placeholderTextColor="#999"
-            keyboardType="decimal-pad"
-            value={water}
-            onChangeText={handleWaterChange}
-          />
+          {/* Dinner Card */}
+          <GlassCard style={styles.card}>
+            <View style={styles.cardContent}>
+              <ThemedText type="subtitle" style={[styles.sectionTitle, { color: accentColor }]}>
+                🍝 Dinner
+              </ThemedText>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    color: Colors.dark.text,
+                    borderColor: Colors.dark.borderColor,
+                    backgroundColor: 'rgba(30, 41, 59, 0.3)',
+                  }
+                ]}
+                placeholder="Add food items..."
+                placeholderTextColor={placeholderText}
+                value={dinner}
+                onChangeText={setDinner}
+              />
+            </View>
+          </GlassCard>
+
+          {/* Water Card */}
+          <GlassCard style={styles.card}>
+            <View style={styles.cardContent}>
+              <ThemedText type="subtitle" style={[styles.sectionTitle, { color: accentColor }]}>
+                💧 Water intake (L)
+              </ThemedText>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    color: Colors.dark.text,
+                    borderColor: Colors.dark.borderColor,
+                    backgroundColor: 'rgba(30, 41, 59, 0.3)',
+                  }
+                ]}
+                placeholder="Enter liters (e.g. 1.5)"
+                placeholderTextColor={placeholderText}
+                keyboardType="decimal-pad"
+                value={water}
+                onChangeText={handleWaterChange}
+              />
+            </View>
+          </GlassCard>
         </View>
 
         <TouchableOpacity 
@@ -153,13 +230,19 @@ export default function FoodTrackingScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>🎉 Congratulations!</Text>
-            <Text style={styles.modalText}>You hit your water goal for today 💧</Text>
+            <ThemedText type="title" style={[styles.modalTitle, { color: accentColor }]}>
+              🎉 Congratulations!
+            </ThemedText>
+            <ThemedText type="default" style={styles.modalText}>
+              You hit your water goal for today 💧
+            </ThemedText>
             <TouchableOpacity
-              style={styles.modalButton}
+              style={[styles.modalButton, { backgroundColor: accentColor }]}
               onPress={() => setShowModal(false)}
             >
-              <Text style={styles.modalButtonText}>OK</Text>
+              <ThemedText type="default" style={styles.modalButtonText}>
+                OK
+              </ThemedText>
             </TouchableOpacity>
           </View>
         </View>
@@ -173,7 +256,7 @@ export default function FoodTrackingScreen() {
           fallSpeed={3000}
         />
       )}
-    </View>
+    </DarkVeilBackground>
   );
 }
 
@@ -204,84 +287,82 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: Typography.spacing['4xl'],
   },
   header: {
-    paddingTop: 60,
-    paddingBottom: 30,
+    paddingTop: Typography.spacing['4xl'],
+    paddingBottom: Typography.spacing['3xl'],
+    paddingHorizontal: Typography.spacing.lg,
     alignItems: 'center',
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
   },
   headerTitle: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
+    textAlign: 'center',
   },
   content: {
-    padding: 20,
+    flex: 1,
+    paddingHorizontal: Typography.spacing.lg,
+    paddingTop: Typography.spacing.sm,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    marginBottom: Typography.spacing.lg,
+    minHeight: 120,
+  },
+  cardContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   sectionTitle: {
-    fontSize: 18,
-    color: '#b22222',
-    fontWeight: '600',
-    marginBottom: 10,
+    marginBottom: Typography.spacing.md,
+    textAlign: 'center',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 45,
-    color: '#222',
-    fontSize: 16,
+    borderRadius: 16,
+    paddingHorizontal: Typography.spacing.lg,
+    height: 56,
+    fontSize: Typography.base.fontSize,
+    fontFamily: 'SF Pro Text',
+    textAlign: 'center',
+    width: '100%',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalBox: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 25,
+    backgroundColor: Colors.dark.cardBackground,
+    borderRadius: 24,
+    padding: Typography.spacing['2xl'],
     width: '80%',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.dark.borderColor,
   },
   modalTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#b22222',
-    marginBottom: 10,
+    textAlign: 'center',
+    marginBottom: Typography.spacing.md,
   },
   modalText: {
-    fontSize: 16,
-    color: '#444',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: Typography.spacing.lg,
   },
   modalButton: {
-    backgroundColor: '#ff6f61',
-    paddingHorizontal: 25,
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingHorizontal: Typography.spacing['2xl'],
+    paddingVertical: Typography.spacing.md,
+    borderRadius: 16,
   },
   modalButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 16,
+    color: Colors.dark.text,
+    fontWeight: Typography.weights.semibold,
+    fontSize: Typography.base.fontSize,
   },
 });
