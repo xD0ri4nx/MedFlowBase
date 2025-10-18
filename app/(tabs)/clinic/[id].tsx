@@ -1,6 +1,4 @@
-// app/(tabs)/clinic/[id].tsx
-// This file should be placed at: app/(tabs)/clinic/[id].tsx
-// It will be accessible but NOT shown in the tab bar navigation
+
 import { createClient } from '@supabase/supabase-js';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
