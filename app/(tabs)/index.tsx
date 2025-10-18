@@ -1,28 +1,104 @@
+import { createClient } from '@supabase/supabase-js';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 
+// Initialize Supabase client
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Supabase credentials not found in environment variables');
+}
+
+const supabase = createClient(supabaseUrl!, supabaseKey!);
+
 export default function HomeScreen() {
   const [hours, setHours] = useState('');
+  const [wakeUps, setWakeUps] = useState('');
   const [emoji, setEmoji] = useState('🤔');
+  const [quality, setQuality] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleChange = (text: string) => {
+  const getQualityFromHours = (hours: number): string => {
+    if (hours <= 4) return 'slab';
+    if (hours <= 6) return 'mediu';
+    if (hours <= 8) return 'bun';
+    return 'excelent';
+  };
+
+  const saveSleepRecord = async (hours: number) => {
+    if (!hours) return;
+
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('general')
+        .insert([
+          {
+            type: 'somn',
+            details: JSON.stringify({
+              ore_somn: hours,
+              calitate: getQualityFromHours(hours),
+              treziri: parseInt(wakeUps) || 0
+            }),
+            data: new Date().toISOString().slice(0, 10)
+          }
+        ]);
+
+      if (error) {
+        console.error('Error saving sleep record:', error);
+        Alert.alert('Error', 'Could not save your sleep record');
+        return false;
+      }
+
+      console.log('Success: Your sleep record has been saved!');
+      Alert.alert('Success', 'Your sleep record has been saved!');
+      
+      // Clear inputs after successful save
+      setHours('');
+      setWakeUps('');
+      setEmoji('🤔');
+      setQuality('');
+      
+      return true;
+    } catch (error) {
+      console.error('Error saving sleep record:', error);
+      console.log('Error: Could not save your sleep record');
+      Alert.alert('Error', 'Could not save your sleep record');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleHoursChange = (text: string) => {
     const value = text.replace(/[^0-9]/g, '');
     setHours(value);
 
-    const num = parseInt(value, 10);
-    if (isNaN(num)) {
+    const sleepHours = parseInt(value, 10);
+    if (isNaN(sleepHours)) {
       setEmoji('🤔');
-    } else if (num <= 4) {
-      setEmoji('🤕');
-    } else if (num <= 6) {
-      setEmoji('😴');
+      setQuality('');
     } else {
-      setEmoji('💪');
+      // Update emoji based on sleep hours
+      if (sleepHours <= 4) {
+        setEmoji('🤕'); // Sick/tired face for very little sleep
+        setQuality('slab');
+      } else if (sleepHours <= 6) {
+        setEmoji('😴'); // Sleepy face for insufficient sleep
+        setQuality('mediu');
+      } else if (sleepHours <= 8) {
+        setEmoji('😊'); // Happy face for good sleep
+        setQuality('bun');
+      } else {
+        setEmoji('💪'); // Strong/energetic for optimal sleep
+        setQuality('excelent');
+      }
     }
   };
 
@@ -55,8 +131,27 @@ export default function HomeScreen() {
             placeholderTextColor="#aaa"
             keyboardType="numeric"
             value={hours}
-            onChangeText={handleChange}
+            onChangeText={handleHoursChange}
           />
+          <TextInput
+            style={[styles.input, { marginTop: 10 }]}
+            placeholder="How many times did you wake up?"
+            placeholderTextColor="#aaa"
+            keyboardType="numeric"
+            value={wakeUps}
+            onChangeText={setWakeUps}
+          />
+          <TouchableOpacity 
+            style={[styles.addButton, loading && styles.saveButtonDisabled]} 
+            onPress={() => saveSleepRecord(parseInt(hours, 10))}
+            disabled={loading || !hours}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.addButtonText}>Save Sleep Record</Text>
+            )}
+          </TouchableOpacity>
         </ThemedView>
 
         <ThemedView style={styles.cardCenter}>
@@ -75,6 +170,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ff4b5c',
+  },
+  addButton: {
+    backgroundColor: '#ff6f61',
+    borderRadius: 12,
+    paddingVertical: 10,
+    marginTop: 15,
+    alignItems: 'center',
+  },
+  saveButtonDisabled: {
+    opacity: 0.7,
+  },
+  addButtonText: { 
+    color: '#fff', 
+    fontWeight: '600', 
+    fontSize: 16 
   },
   header: {
     paddingTop: 60,
