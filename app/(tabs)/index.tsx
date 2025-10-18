@@ -30,15 +30,15 @@ export default function HomeScreen() {
     <ScrollView style={styles.container}>
       <LinearGradient colors={['#ff4b5c', '#ff6f61']} style={styles.header}>
         <Image
-          source={require('@/assets/images/medflow_logo.png')}
+          source={require('@/assets/images/MedFlow-logo.png')}
           style={styles.logo}
         />
-        <Text style={styles.headerTitle}>MedFlow</Text>
+        {/* <Text style={styles.headerTitle}>MedFlow</Text> */}
         <View style={styles.menu}>
-          <Text style={[styles.menuItem, styles.activeMenu]}>daily</Text>
-          <Text style={styles.menuItem}>weekly</Text>
-          <Text style={styles.menuItem}>monthly</Text>
-          <Text style={styles.menuItem}>yearly</Text>
+          <Text style={[styles.menuItem, styles.activeMenu]}>Daily</Text>
+          <Text style={styles.menuItem}>Weekly</Text>
+          <Text style={styles.menuItem}>Monthly</Text>
+          <Text style={styles.menuItem}>Yearly</Text>
         </View>
       </LinearGradient>
 
