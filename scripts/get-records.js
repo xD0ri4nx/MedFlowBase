@@ -10,41 +10,65 @@ if (result.error) {
   process.exit(1);
 }
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// Support both VITE_ and EXPO_PUBLIC_ variable names
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   console.error("Supabase URL or key not found in .env file.");
-  console.error("Please make sure VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY are set in your .env file.");
+  console.error("Please make sure VITE_SUPABASE_URL/VITE_SUPABASE_PUBLISHABLE_KEY or EXPO_PUBLIC_SUPABASE_URL/EXPO_PUBLIC_SUPABASE_ANON_KEY are set in your .env file.");
   process.exit(1);
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-async function getSomnRecords() {
+async function getRecordsByType(type) {
   try {
-    console.log("Fetching 'somn' records from the 'general' table...");
+    console.log(`Fetching '${type}' records from the 'general' table...`);
 
     const { data, error } = await supabase
       .from('general')
       .select('*')
-      .eq('type', 'somn');
+      .eq('type', type)
+      .order('created_at', { ascending: true });
 
     if (error) {
-      console.error("Error fetching records:", error.message);
-      return;
+      console.error(`Error fetching ${type} records:`, error.message);
+      return [];
     }
 
-    if (data && data.length > 0) {
-      console.log(`Found ${data.length} 'somn' record(s):`);
-      console.log(data);
-    } else {
-      console.log("No records with type 'somn' found.");
-    }
-
+    return data || [];
   } catch (e) {
-    console.error("An unexpected error occurred:", e.message);
+    console.error('An unexpected error occurred:', e.message);
+    return [];
   }
 }
 
-getSomnRecords();
+function prettyPrintRecords(records) {
+  return records.map((r) => {
+    let parsedDetails = r.details;
+    try {
+      parsedDetails = JSON.parse(r.details);
+    } catch (e) {
+      // keep as-is if not JSON
+    }
+    return {
+      id: r.id,
+      user_id: r.user_id,
+      date: r.data,
+      type: r.type,
+      details: parsedDetails,
+      created_at: r.created_at,
+    };
+  });
+}
+
+async function main() {
+  // Fetch sleep records
+  const sleep = await getRecordsByType('somn');
+
+  console.log(`\n---- Sleep records (${sleep.length}) ----`);
+  console.log(JSON.stringify(prettyPrintRecords(sleep), null, 2));
+}
+
+main();

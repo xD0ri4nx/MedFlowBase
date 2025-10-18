@@ -1,10 +1,12 @@
+import { createClient } from '@supabase/supabase-js';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function SportScreen() {
     const [activity, setActivity] = useState<string | null>(null);
     const [steps, setSteps] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const levels = [
         { label: 'No Activity', value: 'none' },
@@ -12,6 +14,35 @@ export default function SportScreen() {
         { label: 'Medium', value: 'medium' },
         { label: 'Intense', value: 'intense' },
     ];
+
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl!, supabaseKey!);
+
+    const handleSave = async () => {
+        try {
+            setLoading(true);
+            const details = {
+                steps: steps || '-',
+                activity: activity || '-',
+            };
+            const { error } = await supabase
+                .from('general')
+                .insert([{
+                    type: 'sport',
+                    details: JSON.stringify(details),
+                    data: new Date().toISOString().slice(0, 10),
+                }]);
+            if (error) throw error;
+            Alert.alert('Success', 'Your sport record has been saved!');
+            setSteps('');
+            setActivity(null);
+        } catch (err: any) {
+            Alert.alert('Error', err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <View style={styles.container}>
@@ -57,6 +88,13 @@ export default function SportScreen() {
                     />
                 </View>
             </ScrollView>
+
+            <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSave}
+            >
+                <Text style={styles.saveButtonText}>Save</Text>
+            </TouchableOpacity>
         </View>
     );
 }
@@ -103,4 +141,13 @@ const styles = StyleSheet.create({
     levelActive: { backgroundColor: '#ff6f61', borderColor: '#ff6f61' },
     levelText: { color: '#222', fontSize: 16 },
     levelTextActive: { color: '#fff', fontWeight: '600' },
+    saveButton: {
+        backgroundColor: '#ff6f61',
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    saveButtonText: { color: '#fff', fontSize: 16 },
 });

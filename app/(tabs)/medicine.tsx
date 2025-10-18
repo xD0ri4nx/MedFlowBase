@@ -1,17 +1,48 @@
+import { createClient } from '@supabase/supabase-js';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function MedicineScreen() {
+    // Supabase client (reads EXPO_PUBLIC_ env vars)
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl || '', supabaseKey || '');
+
     const [medicine, setMedicine] = useState('');
     const [time, setTime] = useState('');
     const [list, setList] = useState<{ name: string; time: string }[]>([]);
+    const [loading, setLoading] = useState(false);
 
-    const addMedicine = () => {
-        if (medicine && time) {
-            setList([...list, { name: medicine, time }]);
+    const addMedicine = async () => {
+        if (!medicine || !time) return;
+
+        try {
+            setLoading(true);
+
+            const details = { name: medicine, time };
+                const { data, error } = await supabase
+                    .from('general')
+                    .insert([
+                        { type: 'medicamente', details: JSON.stringify(details), data: new Date().toISOString().slice(0,10) }
+                    ])
+                    .select();
+
+                console.log('Supabase insert response:', { data, error });
+
+                if (error) throw error;
+
+                // push local list
+                setList([...list, { name: medicine, time }]);
             setMedicine('');
             setTime('');
+            console.log('Medicine saved');
+            Alert.alert('Saved', 'Medicine record saved to database');
+        } catch (err: any) {
+            console.error('Error saving medicine:', err.message || err);
+            Alert.alert('Error', err.message || 'Could not save medicine');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -38,8 +69,16 @@ export default function MedicineScreen() {
                         value={time}
                         onChangeText={setTime}
                     />
-                    <TouchableOpacity style={styles.addButton} onPress={addMedicine}>
-                        <Text style={styles.addButtonText}>Add</Text>
+                    <TouchableOpacity 
+                        style={[styles.addButton, loading && styles.saveButtonDisabled]} 
+                        onPress={addMedicine} 
+                        disabled={loading}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.addButtonText}>Add</Text>
+                        )}
                     </TouchableOpacity>
                 </View>
 
@@ -96,6 +135,9 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         marginTop: 15,
         alignItems: 'center',
+    },
+    saveButtonDisabled: {
+        opacity: 0.7,
     },
     addButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
     itemRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
