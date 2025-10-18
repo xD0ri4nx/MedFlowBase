@@ -1,13 +1,11 @@
 import { Tabs } from 'expo-router';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import Ionicons from '@expo/vector-icons/Ionicons';
-
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -15,7 +13,21 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: Colors[colorScheme ?? 'dark'].tint,
+        tabBarInactiveTintColor: Colors[colorScheme ?? 'dark'].tabIconDefault,
+        tabBarStyle: {
+          backgroundColor: Colors[colorScheme ?? 'dark'].cardBackground,
+          borderTopColor: Colors[colorScheme ?? 'dark'].borderColor,
+          borderTopWidth: 1,
+          height: 80,
+          paddingBottom: 20,
+          paddingTop: 10,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '500',
+          fontFamily: 'SF Pro Text',
+        },
         headerShown: false,
         tabBarButton: HapticTab,
       }}>
@@ -29,7 +41,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="food"
         options={{
-          title: 'Food Tracking',
+          title: 'Food',
           tabBarIcon: ({ color }) => <Ionicons name="fast-food" size={24} color={color} />,
         }}
       />
@@ -52,13 +64,6 @@ export default function TabLayout() {
         options={{
           title: 'Clinics',
           tabBarIcon: ({ color }) => <FontAwesome6 name="hospital-user" size={22} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="stethoscope" color={color} />,
         }}
       />
     </Tabs>

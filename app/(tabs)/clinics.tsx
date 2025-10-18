@@ -1,5 +1,10 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+
+import { DarkVeilBackground } from '@/components/dark-veil-background';
+import { GlassCard } from '@/components/glass-card';
+import { ThemedText } from '@/components/themed-text';
+import { Typography } from '@/constants/theme';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 export default function ConsultationsScreen() {
     const clinics = [
@@ -7,45 +12,82 @@ export default function ConsultationsScreen() {
         { name: 'Test Med', specialty: 'Gynecology', emoji: '🩷' },
     ];
 
-    return (
-        <View style={styles.container}>
-            <LinearGradient colors={['#ff4b5c', '#ff6f61']} style={styles.header}>
-                <Text style={styles.headerTitle}>Clinics & Consultations</Text>
-            </LinearGradient>
+    const accentColor = useThemeColor({}, 'accent');
 
-            <ScrollView contentContainerStyle={styles.content}>
-                {clinics.map((clinic, index) => (
-                    <View key={index} style={styles.card}>
-                        <Text style={styles.clinicTitle}>
-                            {clinic.emoji} {clinic.name}
-                        </Text>
-                        <Text style={styles.specialty}>{clinic.specialty}</Text>
-                    </View>
-                ))}
+    return (
+        <DarkVeilBackground style={styles.container}>
+            <ScrollView 
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
+                {/* Header Section */}
+                <View style={styles.header}>
+                    <ThemedText type="title" style={styles.headerTitle}>
+                        Clinics & Consultations
+                    </ThemedText>
+                </View>
+
+                {/* Content Cards */}
+                <View style={styles.content}>
+                    {clinics.map((clinic, index) => (
+                        <GlassCard key={index} style={styles.card}>
+                            <View style={styles.cardContent}>
+                                <ThemedText type="subtitle" style={[styles.clinicTitle, { color: accentColor }]}>
+                                    {clinic.emoji} {clinic.name}
+                                </ThemedText>
+                                <ThemedText type="default" style={styles.specialty}>
+                                    {clinic.specialty}
+                                </ThemedText>
+                            </View>
+                        </GlassCard>
+                    ))}
+                </View>
             </ScrollView>
-        </View>
+        </DarkVeilBackground>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
+    container: {
+        flex: 1,
+    },
+    scrollView: {
+        flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
+        paddingBottom: Typography.spacing['4xl'],
+    },
     header: {
-        paddingTop: 60,
-        paddingBottom: 30,
+        paddingTop: Typography.spacing['4xl'],
+        paddingBottom: Typography.spacing['3xl'],
+        paddingHorizontal: Typography.spacing.lg,
         alignItems: 'center',
-        borderBottomLeftRadius: 40,
-        borderBottomRightRadius: 40,
     },
-    headerTitle: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
-    content: { padding: 20 },
+    headerTitle: {
+        textAlign: 'center',
+    },
+    content: {
+        flex: 1,
+        paddingHorizontal: Typography.spacing.lg,
+        paddingTop: Typography.spacing.sm,
+    },
     card: {
-        backgroundColor: '#fff',
-        borderRadius: 20,
-        padding: 20,
-        marginBottom: 15,
-        borderWidth: 1,
-        borderColor: '#ddd',
+        marginBottom: Typography.spacing.lg,
+        minHeight: 120,
     },
-    clinicTitle: { fontSize: 20, color: '#b22222', fontWeight: '700' },
-    specialty: { fontSize: 16, color: '#444', marginTop: 5 },
+    cardContent: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    clinicTitle: {
+        textAlign: 'center',
+        marginBottom: Typography.spacing.sm,
+    },
+    specialty: {
+        textAlign: 'center',
+        opacity: 0.8,
+    },
 });
