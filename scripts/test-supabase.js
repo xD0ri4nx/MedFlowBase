@@ -54,7 +54,7 @@ async function addSomnRecord() {
         { 
           user_id: userId, 
           type: 'somn', 
-          details: '8 hours',
+          details: JSON.stringify({ "ore_somn": 8, "calitate": "excelent", "treziri": 0 }),
           data: new Date().toISOString().slice(0, 10) // Get date in YYYY-MM-DD format
         }
       ])
