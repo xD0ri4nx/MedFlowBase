@@ -11,6 +11,7 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
 
   return (
+    
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'dark'].tint,
@@ -31,6 +32,10 @@ export default function TabLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
       }}>
+        <Tabs.Screen 
+     name="clinic/[id]" 
+     options={{ href: null }} 
+   />
       <Tabs.Screen
         name="index"
         options={{
@@ -63,7 +68,14 @@ export default function TabLayout() {
         name="clinics"
         options={{
           title: 'Clinics',
-          tabBarIcon: ({ color }) => <FontAwesome6 name="hospital-user" size={22} color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="stethoscope" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.circle.fill" color={color} />,
         }}
       />
     </Tabs>

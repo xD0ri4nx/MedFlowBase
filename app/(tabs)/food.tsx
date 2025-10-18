@@ -14,6 +14,31 @@ import { GlassCard } from '@/components/glass-card';
 import { ThemedText } from '@/components/themed-text';
 import { Colors, Typography } from '@/constants/theme';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { createClient } from '@supabase/supabase-js';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import ConfettiCannon from 'react-native-confetti-cannon';
+
+// Initialize Supabase client
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Supabase credentials not found in environment variables');
+}
+
+const supabase = createClient(supabaseUrl!, supabaseKey!);
 
 export default function FoodTrackingScreen() {
   const [breakfast, setBreakfast] = useState('');
@@ -22,6 +47,42 @@ export default function FoodTrackingScreen() {
   const [water, setWater] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+
+      const details = {
+        breakfast: breakfast || '-',
+        lunch: lunch || '-',
+        dinner: dinner || '-',
+        water: water ? `${water}L` : '-'
+      };
+
+      const { error } = await supabase
+        .from('general')
+        .insert([{ 
+          type: 'consum', 
+          details: JSON.stringify(details),
+          data: new Date().toISOString().slice(0, 10)
+        }]);
+
+      if (error) throw error;
+
+  console.log('Success: Your meal record has been saved!');
+  Alert.alert('Success', 'Your meal record has been saved!');
+      setBreakfast('');
+      setLunch('');
+      setDinner('');
+      setWater('');
+    } catch (err: any) {
+  console.log('Error:', err.message);
+  Alert.alert('Error', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleWaterChange = (text: string) => {
     const clean = text.replace(',', '.');
@@ -147,6 +208,18 @@ export default function FoodTrackingScreen() {
             </View>
           </GlassCard>
         </View>
+
+        <TouchableOpacity 
+          style={[styles.saveButton, loading && styles.saveButtonDisabled]} 
+          onPress={handleSave}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.saveButtonText}>Save Daily Food Record</Text>
+          )}
+        </TouchableOpacity>
       </ScrollView>
 
       <Modal
@@ -188,6 +261,30 @@ export default function FoodTrackingScreen() {
 }
 
 const styles = StyleSheet.create({
+  saveButton: {
+    backgroundColor: '#ff4b5c',
+    padding: 15,
+    borderRadius: 25,
+    marginTop: 20,
+    marginBottom: 30,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  saveButtonDisabled: {
+    opacity: 0.7,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   container: {
     flex: 1,
   },
