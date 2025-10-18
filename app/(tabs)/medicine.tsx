@@ -1,39 +1,96 @@
 import { createClient } from '@supabase/supabase-js';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+import { supabase } from '@/lib/supabase';
+
 
 export default function MedicineScreen() {
     // Supabase client (reads EXPO_PUBLIC_ env vars)
     const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-    const supabase = createClient(supabaseUrl || '', supabaseKey || '');
+    //const supabase = createClient(supabaseUrl || '', supabaseKey || '');
 
     const [medicine, setMedicine] = useState('');
     const [time, setTime] = useState('');
     const [list, setList] = useState<{ name: string; time: string }[]>([]);
     const [loading, setLoading] = useState(false);
+    const [userId, setUserId] = useState<string | null>(null);
+
+    useEffect(() => {
+        // Get current user on component mount
+        getCurrentUser();
+
+        // Listen for auth state changes
+        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+            if (session?.user) {
+                setUserId(session.user.id);
+                console.log('User logged in:', session.user.id);
+            } else {
+                setUserId(null);
+                console.log('User logged out');
+            }
+        });
+
+        return () => {
+            authListener.subscription.unsubscribe();
+        };
+    }, []);
+
+    const getCurrentUser = async () => {
+        try {
+            const { data: { user }, error } = await supabase.auth.getUser();
+
+            if (error) {
+                console.error('Error getting user:', error);
+                return;
+            }
+
+            if (user) {
+                setUserId(user.id);
+                console.log('Current user ID:', user.id);
+            } else {
+                console.log('No user logged in');
+            }
+        } catch (err) {
+            console.error('Error fetching user:', err);
+        }
+    };
 
     const addMedicine = async () => {
-        if (!medicine || !time) return;
+        if (!medicine || !time) {
+            Alert.alert('Error', 'Please fill in both medicine name and time');
+            return;
+        }
+
+        if (!userId) {
+            Alert.alert('Error', 'You must be logged in to add medicine');
+            return;
+        }
 
         try {
             setLoading(true);
 
             const details = { name: medicine, time };
-                const { data, error } = await supabase
-                    .from('general')
-                    .insert([
-                        { type: 'medicamente', details: JSON.stringify(details), data: new Date().toISOString().slice(0,10) }
-                    ])
-                    .select();
+            const { data, error } = await supabase
+                .from('general')
+                .insert([
+                    {
+                        user_id: userId,
+                        type: 'medicamente',
+                        details: JSON.stringify(details),
+                        data: new Date().toISOString().slice(0, 10)
+                    }
+                ])
+                .select();
 
-                console.log('Supabase insert response:', { data, error });
+            console.log('Supabase insert response:', { data, error });
 
-                if (error) throw error;
+            if (error) throw error;
 
-                // push local list
-                setList([...list, { name: medicine, time }]);
+            // push local list
+            setList([...list, { name: medicine, time }]);
             setMedicine('');
             setTime('');
             console.log('Medicine saved');
@@ -50,6 +107,9 @@ export default function MedicineScreen() {
         <View style={styles.container}>
             <LinearGradient colors={['#ff4b5c', '#ff6f61']} style={styles.header}>
                 <Text style={styles.headerTitle}>Medicine Tracker</Text>
+                {userId && (
+                    <Text style={styles.userIdText}>User ID: {userId.slice(0, 8)}...</Text>
+                )}
             </LinearGradient>
 
             <ScrollView contentContainerStyle={styles.content}>
@@ -69,15 +129,17 @@ export default function MedicineScreen() {
                         value={time}
                         onChangeText={setTime}
                     />
-                    <TouchableOpacity 
-                        style={[styles.addButton, loading && styles.saveButtonDisabled]} 
-                        onPress={addMedicine} 
-                        disabled={loading}
+                    <TouchableOpacity
+                        style={[styles.addButton, (loading || !userId) && styles.saveButtonDisabled]}
+                        onPress={addMedicine}
+                        disabled={loading || !userId}
                     >
                         {loading ? (
                             <ActivityIndicator color="#fff" />
                         ) : (
-                            <Text style={styles.addButtonText}>Add</Text>
+                            <Text style={styles.addButtonText}>
+                                {userId ? 'Add' : 'Login Required'}
+                            </Text>
                         )}
                     </TouchableOpacity>
                 </View>
@@ -110,6 +172,12 @@ const styles = StyleSheet.create({
         borderBottomRightRadius: 40,
     },
     headerTitle: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
+    userIdText: {
+        color: '#fff',
+        fontSize: 12,
+        marginTop: 4,
+        opacity: 0.8,
+    },
     content: { padding: 20 },
     card: {
         backgroundColor: '#fff',

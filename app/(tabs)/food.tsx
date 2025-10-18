@@ -1,6 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,6 +13,9 @@ import {
 } from 'react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
 
+import { supabase } from '@/lib/supabase';
+
+
 // Initialize Supabase client
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -22,7 +24,7 @@ if (!supabaseUrl || !supabaseKey) {
   console.error('Supabase credentials not found in environment variables');
 }
 
-const supabase = createClient(supabaseUrl!, supabaseKey!);
+//const supabase = createClient(supabaseUrl!, supabaseKey!);
 
 export default function FoodTrackingScreen() {
   const [breakfast, setBreakfast] = useState('');
@@ -32,8 +34,54 @@ export default function FoodTrackingScreen() {
   const [showModal, setShowModal] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Get current user on component mount
+    getCurrentUser();
+
+    // Listen for auth state changes
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setUserId(session.user.id);
+        console.log('User logged in:', session.user.id);
+      } else {
+        setUserId(null);
+        console.log('User logged out');
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const getCurrentUser = async () => {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+
+      if (error) {
+        console.error('Error getting user:', error);
+        return;
+      }
+
+      if (user) {
+        setUserId(user.id);
+        console.log('Current user ID:', user.id);
+      } else {
+        console.log('No user logged in');
+      }
+    } catch (err) {
+      console.error('Error fetching user:', err);
+    }
+  };
 
   const handleSave = async () => {
+    if (!userId) {
+      Alert.alert('Error', 'You must be logged in to save food records');
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -46,23 +94,24 @@ export default function FoodTrackingScreen() {
 
       const { error } = await supabase
         .from('general')
-        .insert([{ 
-          type: 'consum', 
+        .insert([{
+          user_id: userId,
+          type: 'consum',
           details: JSON.stringify(details),
           data: new Date().toISOString().slice(0, 10)
         }]);
 
       if (error) throw error;
 
-  console.log('Success: Your meal record has been saved!');
-  Alert.alert('Success', 'Your meal record has been saved!');
+      console.log('Success: Your meal record has been saved!');
+      Alert.alert('Success', 'Your meal record has been saved!');
       setBreakfast('');
       setLunch('');
       setDinner('');
       setWater('');
     } catch (err: any) {
-  console.log('Error:', err.message);
-  Alert.alert('Error', err.message);
+      console.log('Error:', err.message);
+      Alert.alert('Error', err.message);
     } finally {
       setLoading(false);
     }
@@ -84,6 +133,9 @@ export default function FoodTrackingScreen() {
     <View style={styles.container}>
       <LinearGradient colors={['#ff4b5c', '#ff6f61']} style={styles.header}>
         <Text style={styles.headerTitle}>Food & Water Tracker</Text>
+        {userId && (
+          <Text style={styles.userIdText}>User ID: {userId.slice(0, 8)}...</Text>
+        )}
       </LinearGradient>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -132,15 +184,17 @@ export default function FoodTrackingScreen() {
           />
         </View>
 
-        <TouchableOpacity 
-          style={[styles.saveButton, loading && styles.saveButtonDisabled]} 
+        <TouchableOpacity
+          style={[styles.saveButton, (loading || !userId) && styles.saveButtonDisabled]}
           onPress={handleSave}
-          disabled={loading}
+          disabled={loading || !userId}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.saveButtonText}>Save Daily Food Record</Text>
+            <Text style={styles.saveButtonText}>
+              {userId ? 'Save Daily Food Record' : 'Login Required'}
+            </Text>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -217,6 +271,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 24,
     fontWeight: 'bold',
+  },
+  userIdText: {
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 4,
+    opacity: 0.8,
   },
   content: {
     padding: 20,

@@ -1,12 +1,14 @@
-import { createClient } from '@supabase/supabase-js';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+import { supabase } from '@/lib/supabase';
 
 export default function SportScreen() {
     const [activity, setActivity] = useState<string | null>(null);
     const [steps, setSteps] = useState('');
     const [loading, setLoading] = useState(false);
+    const [userId, setUserId] = useState<string | null>(null);
 
     const levels = [
         { label: 'No Activity', value: 'none' },
@@ -17,9 +19,54 @@ export default function SportScreen() {
 
     const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-    const supabase = createClient(supabaseUrl!, supabaseKey!);
+    //const supabase = createClient(supabaseUrl!, supabaseKey!);
+
+    useEffect(() => {
+        // Get current user on component mount
+        getCurrentUser();
+
+        // Listen for auth state changes
+        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+            if (session?.user) {
+                setUserId(session.user.id);
+                console.log('User logged in:', session.user.id);
+            } else {
+                setUserId(null);
+                console.log('User logged out');
+            }
+        });
+
+        return () => {
+            authListener.subscription.unsubscribe();
+        };
+    }, []);
+
+    const getCurrentUser = async () => {
+        try {
+            const { data: { user }, error } = await supabase.auth.getUser();
+
+            if (error) {
+                console.error('Error getting user:', error);
+                return;
+            }
+
+            if (user) {
+                setUserId(user.id);
+                console.log('Current user ID:', user.id);
+            } else {
+                console.log('No user logged in');
+            }
+        } catch (err) {
+            console.error('Error fetching user:', err);
+        }
+    };
 
     const handleSave = async () => {
+        if (!userId) {
+            Alert.alert('Error', 'You must be logged in to save sport records');
+            return;
+        }
+
         try {
             setLoading(true);
             const details = {
@@ -29,15 +76,19 @@ export default function SportScreen() {
             const { error } = await supabase
                 .from('general')
                 .insert([{
+                    user_id: userId,
                     type: 'sport',
                     details: JSON.stringify(details),
                     data: new Date().toISOString().slice(0, 10),
                 }]);
             if (error) throw error;
+
+            console.log('Success: Your sport record has been saved!');
             Alert.alert('Success', 'Your sport record has been saved!');
             setSteps('');
             setActivity(null);
         } catch (err: any) {
+            console.error('Error saving sport record:', err);
             Alert.alert('Error', err.message);
         } finally {
             setLoading(false);
@@ -48,6 +99,9 @@ export default function SportScreen() {
         <View style={styles.container}>
             <LinearGradient colors={['#ff4b5c', '#ff6f61']} style={styles.header}>
                 <Text style={styles.headerTitle}>Sport Tracker</Text>
+                {userId && (
+                    <Text style={styles.userIdText}>User ID: {userId.slice(0, 8)}...</Text>
+                )}
             </LinearGradient>
 
             <ScrollView contentContainerStyle={styles.content}>
@@ -90,10 +144,17 @@ export default function SportScreen() {
             </ScrollView>
 
             <TouchableOpacity
-                style={styles.saveButton}
+                style={[styles.saveButton, (loading || !userId) && styles.saveButtonDisabled]}
                 onPress={handleSave}
+                disabled={loading || !userId}
             >
-                <Text style={styles.saveButtonText}>Save</Text>
+                {loading ? (
+                    <ActivityIndicator color="#fff" />
+                ) : (
+                    <Text style={styles.saveButtonText}>
+                        {userId ? 'Save' : 'Login Required'}
+                    </Text>
+                )}
             </TouchableOpacity>
         </View>
     );
@@ -109,6 +170,12 @@ const styles = StyleSheet.create({
         borderBottomRightRadius: 40,
     },
     headerTitle: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
+    userIdText: {
+        color: '#fff',
+        fontSize: 12,
+        marginTop: 4,
+        opacity: 0.8,
+    },
     content: { padding: 20 },
     card: {
         backgroundColor: '#fff',
@@ -143,11 +210,15 @@ const styles = StyleSheet.create({
     levelTextActive: { color: '#fff', fontWeight: '600' },
     saveButton: {
         backgroundColor: '#ff6f61',
-        paddingVertical: 10,
+        paddingVertical: 15,
         paddingHorizontal: 20,
         borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
+        margin: 20,
     },
-    saveButtonText: { color: '#fff', fontSize: 16 },
+    saveButtonDisabled: {
+        opacity: 0.7,
+    },
+    saveButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });

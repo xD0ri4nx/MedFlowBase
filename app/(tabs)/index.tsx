@@ -1,11 +1,13 @@
-import { createClient } from '@supabase/supabase-js';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+
+import { supabase } from '@/lib/supabase';
+
 
 // Initialize Supabase client
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -15,7 +17,7 @@ if (!supabaseUrl || !supabaseKey) {
   console.error('Supabase credentials not found in environment variables');
 }
 
-const supabase = createClient(supabaseUrl!, supabaseKey!);
+//const supabase = createClient(supabaseUrl!, supabaseKey!);
 
 export default function HomeScreen() {
   const [hours, setHours] = useState('');
@@ -23,6 +25,47 @@ export default function HomeScreen() {
   const [emoji, setEmoji] = useState('🤔');
   const [quality, setQuality] = useState('');
   const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Get current user on component mount
+    getCurrentUser();
+
+    // Listen for auth state changes
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setUserId(session.user.id);
+        console.log('User logged in:', session.user.id);
+      } else {
+        setUserId(null);
+        console.log('User logged out');
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const getCurrentUser = async () => {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+
+      if (error) {
+        console.error('Error getting user:', error);
+        return;
+      }
+
+      if (user) {
+        setUserId(user.id);
+        console.log('Current user ID:', user.id);
+      } else {
+        console.log('No user logged in');
+      }
+    } catch (err) {
+      console.error('Error fetching user:', err);
+    }
+  };
 
   const getQualityFromHours = (hours: number): string => {
     if (hours <= 4) return 'slab';
@@ -32,7 +75,15 @@ export default function HomeScreen() {
   };
 
   const saveSleepRecord = async (hours: number) => {
-    if (!hours) return;
+    if (!hours) {
+      Alert.alert('Error', 'Please enter number of hours');
+      return;
+    }
+
+    if (!userId) {
+      Alert.alert('Error', 'You must be logged in to save records');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -40,6 +91,7 @@ export default function HomeScreen() {
         .from('general')
         .insert([
           {
+            user_id: userId,
             type: 'somn',
             details: JSON.stringify({
               ore_somn: hours,
@@ -58,13 +110,13 @@ export default function HomeScreen() {
 
       console.log('Success: Your sleep record has been saved!');
       Alert.alert('Success', 'Your sleep record has been saved!');
-      
+
       // Clear inputs after successful save
       setHours('');
       setWakeUps('');
       setEmoji('🤔');
       setQuality('');
-      
+
       return true;
     } catch (error) {
       console.error('Error saving sleep record:', error);
@@ -110,6 +162,9 @@ export default function HomeScreen() {
           style={styles.logo}
         />
         <Text style={styles.headerTitle}>MedFlow</Text>
+        {userId && (
+          <Text style={styles.userIdText}>User ID: {userId.slice(0, 8)}...</Text>
+        )}
         <View style={styles.menu}>
           <Text style={[styles.menuItem, styles.activeMenu]}>daily</Text>
           <Text style={styles.menuItem}>weekly</Text>
@@ -141,15 +196,17 @@ export default function HomeScreen() {
             value={wakeUps}
             onChangeText={setWakeUps}
           />
-          <TouchableOpacity 
-            style={[styles.addButton, loading && styles.saveButtonDisabled]} 
+          <TouchableOpacity
+            style={[styles.addButton, (loading || !hours || !userId) && styles.saveButtonDisabled]}
             onPress={() => saveSleepRecord(parseInt(hours, 10))}
-            disabled={loading || !hours}
+            disabled={loading || !hours || !userId}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.addButtonText}>Save Sleep Record</Text>
+              <Text style={styles.addButtonText}>
+                {userId ? 'Save Sleep Record' : 'Login Required'}
+              </Text>
             )}
           </TouchableOpacity>
         </ThemedView>
@@ -181,10 +238,10 @@ const styles = StyleSheet.create({
   saveButtonDisabled: {
     opacity: 0.7,
   },
-  addButtonText: { 
-    color: '#fff', 
-    fontWeight: '600', 
-    fontSize: 16 
+  addButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16
   },
   header: {
     paddingTop: 60,
@@ -203,6 +260,12 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 26,
     fontWeight: 'bold',
+  },
+  userIdText: {
+    color: 'white',
+    fontSize: 12,
+    marginTop: 4,
+    opacity: 0.8,
   },
   headerSubtitle: {
     color: 'white',
